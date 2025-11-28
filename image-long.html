@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>圖片拼接工具</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen p-2 sm:p-6">
+    <div class="max-w-4xl mx-auto w-full">
+        
+        <div class="mb-4">
+            <a href="index.html" class="inline-flex items-center text-gray-600 hover:text-blue-600 transition-colors bg-white/50 px-3 py-1.5 rounded-lg hover:bg-white">
+                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                </svg>
+                返回工具箱
+            </a>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-xl p-4 sm:p-8">
+            <div class="mb-6">
+                <h1 class="text-2xl sm:text-3xl font-bold text-gray-800 mb-2 text-center">圖片拼接工具</h1>
+                <p class="text-sm sm:text-base text-gray-600 text-center">按檔名順序將圖片從上到下拼接成長圖</p>
+                <div class="w-full h-px bg-gray-200 mt-4"></div>
+            </div>
+            
+            <div class="bg-gray-50 rounded-xl p-4 sm:p-6 mb-4 sm:mb-6">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">目標寬度 (像素)</label>
+                        <input type="number" id="targetWidth" value="1000" min="100" max="2000" 
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">圖片間距 (像素)</label>
+                        <input type="number" id="imageSpacing" value="0" min="0" max="50" 
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">輸出格式</label>
+                        <select id="outputFormat" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <option value="jpeg">JPG</option>
+                            <option value="png">PNG</option>
+                        </select>
+                        <div class="mt-2 text-xs text-gray-500">
+                            <div>• JPG：90% 品質壓縮，檔案較小</div>
+                            <div>• PNG：無損品質，支援透明背景</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">圖片名稱</label>
+                        <input type="text" id="customFileName" value="拼接長圖" placeholder="輸入檔案名稱" 
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <div class="mt-1 text-xs text-gray-500">系統會自動加上時間戳記和副檔名</div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">儲存位置</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="saveLocation" value="下載資料夾" readonly 
+                                   class="flex-1 px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600">
+                            <button id="chooseFolderBtn" class="bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-2 rounded-lg text-sm font-medium transition-colors">
+                                選擇
+                            </button>
+                        </div>
+                        <div class="mt-1 text-xs text-gray-500">Chrome/Edge 支援自訂位置，Safari 使用預設下載資料夾</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="border-2 border-dashed border-gray-300 rounded-xl p-4 sm:p-8 text-center mb-4 sm:mb-6 hover:border-blue-400 transition-colors">
+                <input type="file" id="imageInput" multiple accept="image/*" class="hidden">
+                <div id="uploadArea" class="cursor-pointer">
+                    <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                        <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <p class="text-base sm:text-lg text-gray-600 mb-2">點擊選擇圖片或拖拽到此處</p>
+                    <p class="text-xs sm:text-sm text-gray-500">支援 JPG、PNG、GIF 格式，可選擇多張圖片</p>
+                </div>
+            </div>
+
+            <div id="imagePreview" class="hidden mb-4 sm:mb-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-base sm:text-lg font-semibold text-gray-800">已選擇的圖片 <span class="hidden sm:inline">(可拖拽調整順序)</span></h3>
+                    <div class="flex gap-2">
+                        <button id="addMoreBtn" class="bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1 rounded-lg text-sm font-medium transition-colors">
+                            + 繼續添加
+                        </button>
+                        <button id="clearAllBtn" class="bg-red-100 hover:bg-red-200 text-red-700 px-3 py-1 rounded-lg text-sm font-medium transition-colors">
+                            清空全部
+                        </button>
+                    </div>
+                </div>
+                <div id="imageList" class="space-y-2 overflow-y-auto" style="max-height: none;"></div>
+                <div class="text-sm text-gray-500 mt-2 space-y-1">
+                    <p>💡 提示：</p>
+                    <p>• 點擊圖片可選擇，Ctrl/Cmd+點擊多選，Shift+點擊範圍選擇</p>
+                    <p>• 拖拽圖片可調整順序，支援多選圖片一起移動</p>
+                    <p>• 拼接時會按照當前順序執行</p>
+                </div>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-4 sm:mb-6">
+                <button id="processBtn" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed">
+                    開始拼接
+                </button>
+                <button id="reprocessBtn" class="flex-1 bg-orange-600 hover:bg-orange-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors hidden">
+                    再次拼接
+                </button>
+                <button id="downloadBtn" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors hidden">
+                    下載長圖
+                </button>
+            </div>
+
+            <div id="progressArea" class="hidden mb-4 sm:mb-6">
+                <div class="bg-gray-200 rounded-full h-2 mb-2">
+                    <div id="progressBar" class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+                </div>
+                <p id="progressText" class="text-sm text-gray-600 text-center">準備中...</p>
+            </div>
+
+            <div id="resultArea" class="hidden">
+                <h3 class="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4">✅ 拼接完成！</h3>
+                <div class="border-2 border-green-200 rounded-lg p-3 sm:p-4 bg-green-50">
+                    <div class="mb-3">
+                        <p class="text-xs sm:text-sm text-gray-600 mb-2">📏 最終尺寸：<span id="finalDimensions" class="font-semibold"></span></p>
+                        <p class="text-xs sm:text-sm text-gray-600">💡 可以滾動查看完整圖片，或點擊下載按鈕保存</p>
+                    </div>
+                    <div class="border-2 border-gray-300 rounded-lg bg-white p-1 sm:p-2 max-h-64 sm:max-h-96 overflow-auto">
+                        <canvas id="resultCanvas" class="max-w-full h-auto shadow-sm"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const imageInput = document.getElementById('imageInput');
+        const uploadArea = document.getElementById('uploadArea');
+        const imagePreview = document.getElementById('imagePreview');
+        const imageList = document.getElementById('imageList');
+        const processBtn = document.getElementById('processBtn');
+        const reprocessBtn = document.getElementById('reprocessBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const progressArea = document.getElementById('progressArea');
+        const progressBar = document.getElementById('progressBar');
+        const progressText = document.getElementById('progressText');
+        const resultArea = document.getElementById('resultArea');
+        const resultCanvas = document.getElementById('resultCanvas');
+        const targetWidthInput = document.getElementById('targetWidth');
+        const imageSpacingInput = document.getElementById('imageSpacing');
+        const outputFormatInput = document.getElementById('outputFormat');
+        const addMoreBtn = document.getElementById('addMoreBtn');
+        const clearAllBtn = document.getElementById('clearAllBtn');
+        const customFileNameInput = document.getElementById('customFileName');
+        const saveLocationInput = document.getElementById('saveLocation');
+        const chooseFolderBtn = document.getElementById('chooseFolderBtn');
+
+        let selectedImages = [];
+        let draggedIndex = null;
+        let customSaveHandle = null;
+        let selectedIndices = new Set();
+        let isDragging = false;
+
+        uploadArea.addEventListener('click', () => { imageInput.click(); });
+        uploadArea.addEventListener('dragover', (e) => { e.preventDefault(); uploadArea.classList.add('bg-blue-50'); });
+        uploadArea.addEventListener('dragleave', () => { uploadArea.classList.remove('bg-blue-50'); });
+        uploadArea.addEventListener('drop', (e) => { e.preventDefault(); uploadArea.classList.remove('bg-blue-50'); const files = Array.from(e.dataTransfer.files).filter(file => file.type.startsWith('image/')); handleFiles(files); });
+        imageInput.addEventListener('change', (e) => { const files = Array.from(e.target.files); handleFiles(files); });
+        addMoreBtn.addEventListener('click', () => { imageInput.click(); });
+        
+        clearAllBtn.addEventListener('click', () => {
+            selectedImages = []; selectedIndices.clear(); imagePreview.classList.add('hidden'); processBtn.disabled = true;
+            processBtn.textContent = '開始拼接'; processBtn.classList.remove('bg-green-600', 'hover:bg-green-700');
+            processBtn.classList.add('bg-blue-600', 'hover:bg-blue-700'); reprocessBtn.classList.add('hidden');
+            downloadBtn.classList.add('hidden'); resultArea.classList.add('hidden'); progressArea.classList.add('hidden');
+            customFileNameInput.value = '拼接長圖';
+        });
+
+        chooseFolderBtn.addEventListener('click', async () => {
+            try {
+                if ('showDirectoryPicker' in window) {
+                    customSaveHandle = await window.showDirectoryPicker();
+                    saveLocationInput.value = customSaveHandle.name || '自訂資料夾';
+                } else {
+                    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+                    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+                    let message = '此功能需要較新版本的瀏覽器支援。\n\n';
+                    if (isSafari || isIOS) { message += 'Safari 用戶建議：\n檔案會自動下載到「下載項目」資料夾\n'; } 
+                    else { message += '建議使用 Chrome、Edge 或 Firefox 最新版本\n'; }
+                    alert(message);
+                }
+            } catch (error) { if (error.name !== 'AbortError') console.log('Error:', error); }
+        });
+
+        function handleDragStart(e) {
+            isDragging = true; draggedIndex = parseInt(e.target.dataset.index);
+            if (!selectedIndices.has(draggedIndex)) { selectedIndices.clear(); selectedIndices.add(draggedIndex); updateSelectionDisplay(); }
+            const selectedItems = Array.from(selectedIndices).sort((a, b) => a - b);
+            selectedItems.forEach(index => { const item = document.querySelector(`[data-index="${index}"]`); if (item) item.style.opacity = '0.5'; });
+            e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', JSON.stringify(Array.from(selectedIndices)));
+        }
+        function handleDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }
+        function handleDrop(e) {
+            e.preventDefault(); const dropTarget = e.target.closest('[data-index]'); if (!dropTarget) return;
+            const dropIndex = parseInt(dropTarget.dataset.index); const draggedIndices = JSON.parse(e.dataTransfer.getData('text/plain'));
+            if (draggedIndices.length > 0 && !draggedIndices.includes(dropIndex)) {
+                const itemsToMove = draggedIndices.sort((a, b) => a - b).map(index => ({ index: index, item: selectedImages[index] }));
+                for (let i = itemsToMove.length - 1; i >= 0; i--) { selectedImages.splice(itemsToMove[i].index, 1); }
+                let newDropIndex = dropIndex; for (const item of itemsToMove) { if (item.index < dropIndex) { newDropIndex--; } }
+                for (let i = 0; i < itemsToMove.length; i++) { selectedImages.splice(newDropIndex + i, 0, itemsToMove[i].item); }
+                selectedIndices.clear(); for (let i = 0; i < itemsToMove.length; i++) { selectedIndices.add(newDropIndex + i); }
+                displayImagePreview();
+            }
+        }
+        function handleDragEnd(e) { isDragging = false; document.querySelectorAll('[data-index]').forEach(item => { item.style.opacity = '1'; }); draggedIndex = null; }
+        function updateSelectionDisplay() {
+            document.querySelectorAll('[data-index]').forEach((item, index) => {
+                const isSelected = selectedIndices.has(index);
+                if (isSelected) { item.classList.add('ring-2', 'ring-blue-500', 'bg-blue-50'); } 
+                else { item.classList.remove('ring-2', 'ring-blue-500', 'bg-blue-50'); }
+            });
+        }
+        function handleImageClick(e, index) {
+            if (isDragging) return; e.preventDefault(); e.stopPropagation();
+            if (e.ctrlKey || e.metaKey) { if (selectedIndices.has(index)) selectedIndices.delete(index); else selectedIndices.add(index); } 
+            else if (e.shiftKey && selectedIndices.size > 0) {
+                const lastSelected = Math.max(...selectedIndices); const start = Math.min(index, lastSelected); const end = Math.max(index, lastSelected);
+                selectedIndices.clear(); for (let i = start; i <= end; i++) { selectedIndices.add(i); }
+            } else { selectedIndices.clear(); selectedIndices.add(index); }
+            updateSelectionDisplay();
+        }
+        function removeImage(index) {
+            if (selectedIndices.has(index)) {
+                const indicesToRemove = Array.from(selectedIndices).sort((a, b) => b - a);
+                indicesToRemove.forEach(i => { selectedImages.splice(i, 1); }); selectedIndices.clear();
+            } else {
+                selectedImages.splice(index, 1);
+                const newSelectedIndices = new Set(); selectedIndices.forEach(i => { if (i < index) newSelectedIndices.add(i); else if (i > index) newSelectedIndices.add(i - 1); }); selectedIndices = newSelectedIndices;
+            }
+            if (selectedImages.length === 0) { imagePreview.classList.add('hidden'); processBtn.disabled = true; } else { displayImagePreview(); }
+        }
+        function handleFiles(files) {
+            if (files.length === 0) return;
+            const newFiles = Array.from(files).filter(newFile => !selectedImages.some(existing => existing.name === newFile.name));
+            selectedImages = [...selectedImages, ...newFiles].sort((a, b) => a.name.localeCompare(b.name));
+            displayImagePreview(); processBtn.disabled = selectedImages.length === 0;
+        }
+        function displayImagePreview() {
+            imageList.innerHTML = ''; imagePreview.classList.remove('hidden');
+            const maxVisibleImages = 20; const imageItemHeight = 100;
+            if (selectedImages.length <= maxVisibleImages) { imageList.style.maxHeight = 'none'; } 
+            else { imageList.style.maxHeight = (maxVisibleImages * imageItemHeight) + 'px'; }
+            selectedImages.forEach((file, index) => {
+                const div = document.createElement('div'); div.className = 'flex items-center space-x-3 p-3 bg-white rounded-lg border cursor-move hover:bg-gray-50 transition-colors'; div.draggable = true; div.dataset.index = index;
+                const dragHandle = document.createElement('div'); dragHandle.className = 'text-gray-400 hover:text-gray-600 select-none'; dragHandle.innerHTML = '⋮⋮';
+                const img = document.createElement('img'); img.className = 'w-36 h-24 object-contain rounded pointer-events-none bg-gray-100'; img.src = URL.createObjectURL(file); img.onload = () => URL.revokeObjectURL(img.src);
+                const info = document.createElement('div'); info.className = 'flex-1 min-w-0 pointer-events-none'; info.innerHTML = `<p class="font-medium text-gray-800 text-sm truncate">${file.name}</p><p class="text-xs text-gray-500">${(file.size / 1024 / 1024).toFixed(2)} MB</p>`;
+                const controls = document.createElement('div'); controls.className = 'flex items-center space-x-2';
+                const order = document.createElement('div'); order.className = 'text-sm font-semibold text-blue-600 bg-blue-100 px-2 py-1 rounded pointer-events-none'; order.textContent = `#${index + 1}`;
+                const removeBtn = document.createElement('button'); removeBtn.className = 'text-red-500 hover:text-red-700 text-sm font-bold w-6 h-6 rounded-full hover:bg-red-100 transition-colors z-10'; removeBtn.innerHTML = '×'; removeBtn.onclick = (e) => { e.stopPropagation(); removeImage(index); };
+                controls.appendChild(order); controls.appendChild(removeBtn);
+                div.appendChild(dragHandle); div.appendChild(img); div.appendChild(info); div.appendChild(controls);
+                div.addEventListener('click', (e) => handleImageClick(e, index));
+                div.addEventListener('dragstart', handleDragStart); div.addEventListener('dragover', handleDragOver); div.addEventListener('drop', handleDrop); div.addEventListener('dragend', handleDragEnd);
+                imageList.appendChild(div);
+            });
+            updateSelectionDisplay();
+        }
+
+        reprocessBtn.addEventListener('click', async () => { runProcess(); });
+        processBtn.addEventListener('click', async () => { runProcess(); });
+
+        async function runProcess() {
+            if (selectedImages.length === 0) return;
+            processBtn.disabled = true; processBtn.textContent = '處理中...'; processBtn.classList.add('animate-pulse');
+            if(processBtn.classList.contains('bg-green-600')) { processBtn.classList.remove('bg-green-600', 'hover:bg-green-700'); processBtn.classList.add('bg-blue-600', 'hover:bg-blue-700'); }
+            reprocessBtn.classList.add('hidden'); downloadBtn.classList.add('hidden'); progressArea.classList.remove('hidden');
+            progressBar.style.width = '0%'; progressText.textContent = '準備處理圖片...';
+            const targetWidth = parseInt(targetWidthInput.value); const spacing = parseInt(imageSpacingInput.value);
+            try {
+                await processImages(selectedImages, targetWidth, spacing);
+                processBtn.textContent = '拼接完成 ✓'; processBtn.classList.remove('animate-pulse'); processBtn.classList.add('bg-green-600', 'hover:bg-green-700'); processBtn.classList.remove('bg-blue-600', 'hover:bg-blue-700'); reprocessBtn.classList.remove('hidden');
+            } catch (error) {
+                alert('處理圖片時發生錯誤：' + error.message); processBtn.disabled = false; processBtn.textContent = '開始拼接'; processBtn.classList.remove('animate-pulse');
+            }
+        }
+
+        async function processImages(files, targetWidth, spacing) {
+            const canvas = resultCanvas; const ctx = canvas.getContext('2d');
+            try {
+                progressText.textContent = `正在載入 ${files.length} 張圖片...`; progressBar.style.width = '10%';
+                const imagePromises = files.map((file, index) => loadImageWithTimeout(file, 15000).catch(error => { throw new Error(`載入圖片 "${file.name}" 失敗: ${error.message}`); }));
+                const images = await Promise.all(imagePromises);
+                progressBar.style.width = '50%'; progressText.textContent = '計算畫布尺寸...';
+                let totalHeight = 0; const scaledImages = [];
+                for (let i = 0; i < images.length; i++) {
+                    const img = images[i]; const scale = targetWidth / img.width; const scaledHeight = img.height * scale;
+                    scaledImages.push({ img: img, width: targetWidth, height: scaledHeight });
+                    totalHeight += scaledHeight; if (i < images.length - 1) { totalHeight += spacing; }
+                }
+                progressBar.style.width = '60%'; progressText.textContent = '建立畫布...';
+                canvas.width = targetWidth; canvas.height = totalHeight;
+                ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, targetWidth, totalHeight);
+                progressText.textContent = '拼接圖片中...'; progressBar.style.width = '80%';
+                let currentY = 0;
+                for (let i = 0; i < scaledImages.length; i++) {
+                    const scaledImg = scaledImages[i]; ctx.drawImage(scaledImg.img, 0, currentY, scaledImg.width, scaledImg.height); currentY += scaledImg.height + spacing;
+                }
+                progressText.textContent = '拼接完成！'; progressBar.style.width = '100%';
+                document.getElementById('finalDimensions').textContent = `${targetWidth} x ${Math.round(totalHeight)} 像素`;
+                resultArea.classList.remove('hidden'); downloadBtn.classList.remove('hidden'); resultArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } catch (error) { throw error; }
+        }
+
+        function loadImageWithTimeout(file, timeout = 15000) {
+            return new Promise((resolve, reject) => {
+                const img = new Image(); let timeoutId; let objectUrl;
+                const cleanup = () => { if (timeoutId) clearTimeout(timeoutId); if (objectUrl) URL.revokeObjectURL(objectUrl); };
+                img.onload = () => { cleanup(); resolve(img); };
+                img.onerror = () => { cleanup(); reject(new Error('圖片載入失敗')); };
+                timeoutId = setTimeout(() => { cleanup(); reject(new Error('圖片載入超時')); }, timeout);
+                try { objectUrl = URL.createObjectURL(file); img.src = objectUrl; } catch (error) { cleanup(); reject(new Error('無法讀取檔案')); }
+            });
+        }
+
+        downloadBtn.addEventListener('click', async () => {
+            const format = outputFormatInput.value; const mimeType = format === 'jpeg' ? 'image/jpeg' : 'image/png'; const extension = format === 'jpeg' ? 'jpg' : 'png'; const quality = format === 'jpeg' ? 0.9 : undefined;
+            const customName = customFileNameInput.value.trim();
+            let fileName = (customName && customName !== '拼接長圖') ? `${customName}.${extension}` : `拼接長圖_${new Date().getTime()}.${extension}`;
+            if (customSaveHandle && 'showDirectoryPicker' in window) {
+                try {
+                    const blob = await new Promise(resolve => { resultCanvas.toBlob(resolve, mimeType, quality); });
+                    const fileHandle = await customSaveHandle.getFileHandle(fileName, { create: true });
+                    const writable = await fileHandle.createWritable(); await writable.write(blob); await writable.close();
+                    alert(`檔案已成功儲存到指定位置：${fileName}`);
+                } catch (error) { console.log('Error saving:', error); fallbackDownload(); }
+            } else { fallbackDownload(); }
+            function fallbackDownload() { const link = document.createElement('a'); link.download = fileName; link.href = resultCanvas.toDataURL(mimeType, quality); link.click(); }
+        });
+    </script>
+</body>
+</html>
