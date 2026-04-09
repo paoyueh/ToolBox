@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF 批次裁切與命名工具</title>
+    <!-- Tailwind CSS (清新淺色主題) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- PDF.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <!-- SheetJS (Excel 處理) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- JSZip & FileSaver (打包與下載) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .step-card { transition: all 0.3s ease; }
+        .step-card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05); }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 min-h-screen p-6">
+
+    <div class="max-w-4xl mx-auto space-y-6">
+        
+        <!-- 返回工具箱按鈕 -->
+        <div class="mb-2">
+            <a href="index.html" class="inline-flex items-center text-sm font-medium text-gray-500 hover:text-blue-600 transition-colors">
+                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                </svg>
+                返回工具箱
+            </a>
+        </div>
+
+        <!-- 標題 -->
+        <div class="text-center pb-4">
+            <h1 class="text-3xl font-bold text-gray-900">PDF 批次裁切與命名工具</h1>
+            <p class="text-gray-500 mt-2">跨裝置純前端處理，一鍵匯出 ZIP 壓縮檔並自選儲存位置</p>
+        </div>
+
+        <!-- 第一步：匯入 PDF -->
+        <div class="step-card bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <h2 class="text-xl font-semibold mb-4 text-blue-600">第一步：匯入多頁 PDF</h2>
+            <input type="file" id="pdfInput" accept="application/pdf" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition">
+            <p id="pdfStatus" class="text-sm text-green-600 mt-2 hidden"></p>
+        </div>
+
+        <!-- 第二步：裁切與解析度 -->
+        <div class="step-card bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <h2 class="text-xl font-semibold mb-4 text-blue-600">第二步：設定裁切範圍與格式</h2>
+            <p class="text-xs text-gray-400 mb-4">
+                從畫面左上角 (0,0) 開始計算 
+                <span id="autoDetectHint" class="ml-2 text-green-600 hidden font-semibold bg-green-50 px-2 py-1 rounded">✨ 已從檔名自動帶入尺寸</span>
+            </p>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">裁切寬度 (mm)</label>
+                    <input type="number" id="cropWidth" value="80" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">裁切長度 (mm)</label>
+                    <input type="number" id="cropHeight" value="50" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">解析度 (DPI)</label>
+                    <input type="number" id="dpiSetting" value="300" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">圖片格式</label>
+                    <select id="imgFormat" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="image/jpeg">JPEG</option>
+                        <option value="image/png">PNG</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- 第三步：命名規則 -->
+        <div class="step-card bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <h2 class="text-xl font-semibold mb-4 text-blue-600">第三步：設定命名規則</h2>
+            <div class="space-y-4">
+                <div class="flex items-center">
+                    <input type="radio" id="nameDefault" name="namingRule" value="default" checked class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500">
+                    <label for="nameDefault" class="ml-2 text-sm font-medium text-gray-700">預設 (PDF檔名 + 頁數序號)</label>
+                </div>
+                
+                <div class="flex items-center">
+                    <input type="radio" id="nameExcel" name="namingRule" value="excel" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500">
+                    <label for="nameExcel" class="ml-2 text-sm font-medium text-gray-700">使用 Excel 多欄位組合</label>
+                </div>
+
+                <!-- Excel 設定區塊 -->
+                <div id="excelSettings" class="hidden pl-6 pt-2 border-l-2 border-blue-200">
+                    <input type="file" id="excelInput" accept=".xlsx, .xls, .csv" class="block w-full text-sm text-gray-500 file:mr-4 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100 transition mb-4">
+                    
+                    <div class="space-y-3 bg-gray-50 p-4 rounded-lg border border-gray-200">
+                        <p class="text-xs text-gray-500 mb-2">設定的項目會自動以底線「_」隔開。Excel 內的「/」符號會自動轉換為全形「／」以符合系統規範。</p>
+                        
+                        <div class="flex items-center">
+                            <label class="w-24 text-sm font-medium text-gray-600">前綴字</label>
+                            <input type="text" id="prefix" placeholder="選填" class="flex-1 px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        
+                        <div class="flex items-center">
+                            <label class="w-24 text-sm font-medium text-gray-600">對應欄位 1</label>
+                            <select id="excelCol1" class="flex-1 px-3 py-1.5 border border-gray-300 rounded-md text-sm disabled:bg-gray-100"><option value="">請先匯入 Excel</option></select>
+                        </div>
+
+                        <div class="flex items-center">
+                            <label class="w-24 text-sm font-medium text-gray-600">對應欄位 2</label>
+                            <select id="excelCol2" class="flex-1 px-3 py-1.5 border border-gray-300 rounded-md text-sm disabled:bg-gray-100"><option value="">請先匯入 Excel</option></select>
+                        </div>
+
+                        <div class="flex items-center">
+                            <label class="w-24 text-sm font-medium text-gray-600">對應欄位 3</label>
+                            <select id="excelCol3" class="flex-1 px-3 py-1.5 border border-gray-300 rounded-md text-sm disabled:bg-gray-100"><option value="">請先匯入 Excel</option></select>
+                        </div>
+
+                        <div class="flex items-center">
+                            <label class="w-24 text-sm font-medium text-gray-600">後綴字</label>
+                            <input type="text" id="suffix" placeholder="選填" class="flex-1 px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 第四步：執行與打包 -->
+        <div class="step-card bg-white p-6 rounded-xl shadow-sm border border-gray-100 text-center">
+            <h2 class="text-xl font-semibold mb-4 text-blue-600">第四步：執行裁切與打包</h2>
+            <p class="text-sm text-gray-500 mb-4">處理完畢後，系統會自動跳出「另存新檔」視窗，讓您選擇 ZIP 檔要存放的資料夾位置。</p>
+            
+            <button id="processBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg shadow-md transition duration-200 w-full md:w-auto disabled:opacity-50 disabled:cursor-not-allowed">
+                開始處理並儲存 ZIP
+            </button>
+
+            <!-- 進度條 -->
+            <div id="progressContainer" class="mt-6 hidden">
+                <div class="w-full bg-gray-200 rounded-full h-2.5 mb-2">
+                    <div id="progressBar" class="bg-green-500 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+                </div>
+                <p id="progressText" class="text-sm text-gray-600">準備中...</p>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // 初始化 PDF.js Worker
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        let pdfDocument = null;
+        let pdfFileName = "未命名檔案";
+        let excelData = [];
+        
+        // DOM 元素
+        const pdfInput = document.getElementById('pdfInput');
+        const pdfStatus = document.getElementById('pdfStatus');
+        const excelSettings = document.getElementById('excelSettings');
+        const excelInput = document.getElementById('excelInput');
+        
+        const col1Select = document.getElementById('excelCol1');
+        const col2Select = document.getElementById('excelCol2');
+        const col3Select = document.getElementById('excelCol3');
+        const processBtn = document.getElementById('processBtn');
+        const cropWidthInput = document.getElementById('cropWidth');
+        const cropHeightInput = document.getElementById('cropHeight');
+        const autoDetectHint = document.getElementById('autoDetectHint');
+
+        // 檔名過濾：保留斜線視覺，避免產生資料夾
+        function sanitizeFilename(name) {
+            if (!name) return "";
+            let safeName = String(name).replace(/\//g, '／').replace(/\\/g, '＼');
+            safeName = safeName.replace(/[:\*\?"<>\|\r\n]/g, '-').trim();
+            return safeName;
+        }
+
+        // 處理 第一步：PDF 匯入與檔名解析
+        pdfInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            pdfFileName = file.name.replace(/\.[^/.]+$/, ""); // 移除副檔名
+            
+            // 嘗試從檔名解析寬高
+            const widthMatch = pdfFileName.match(/寬\s*(\d+(?:\.\d+)?)/);
+            const heightMatch = pdfFileName.match(/高\s*(\d+(?:\.\d+)?)/);
+            
+            let detected = false;
+            if (widthMatch) {
+                cropWidthInput.value = widthMatch[1];
+                cropWidthInput.classList.add('bg-green-100', 'border-green-400');
+                setTimeout(() => cropWidthInput.classList.remove('bg-green-100', 'border-green-400'), 2000);
+                detected = true;
+            }
+            if (heightMatch) {
+                cropHeightInput.value = heightMatch[1];
+                cropHeightInput.classList.add('bg-green-100', 'border-green-400');
+                setTimeout(() => cropHeightInput.classList.remove('bg-green-100', 'border-green-400'), 2000);
+                detected = true;
+            }
+            
+            if (detected) {
+                autoDetectHint.classList.remove('hidden');
+            } else {
+                autoDetectHint.classList.add('hidden');
+            }
+
+            const fileReader = new FileReader();
+            fileReader.onload = async function() {
+                const typedarray = new Uint8Array(this.result);
+                try {
+                    pdfDocument = await pdfjsLib.getDocument(typedarray).promise;
+                    pdfStatus.textContent = `已成功載入: ${file.name} (共 ${pdfDocument.numPages} 頁)`;
+                    pdfStatus.classList.remove('hidden');
+                } catch (error) {
+                    alert('PDF 載入失敗，請確認檔案格式是否正確。');
+                }
+            };
+            fileReader.readAsArrayBuffer(file);
+        });
+
+        // 監聽 第三步：命名規則切換
+        document.getElementsByName('namingRule').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                if (e.target.value === 'excel') {
+                    excelSettings.classList.remove('hidden');
+                } else {
+                    excelSettings.classList.add('hidden');
+                }
+            });
+        });
+
+        // 處理 第三步：Excel 匯入
+        excelInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                
+                excelData = XLSX.utils.sheet_to_json(worksheet, {defval: ""});
+                
+                if (excelData.length > 0) {
+                    const headers = Object.keys(excelData[0]);
+                    
+                    col1Select.innerHTML = '';
+                    col2Select.innerHTML = '<option value="">(不使用)</option>';
+                    col3Select.innerHTML = '<option value="">(不使用)</option>';
+
+                    headers.forEach(header => {
+                        col1Select.appendChild(new Option(header, header));
+                        col2Select.appendChild(new Option(header, header));
+                        col3Select.appendChild(new Option(header, header));
+                    });
+
+                    col1Select.disabled = false;
+                    col2Select.disabled = false;
+                    col3Select.disabled = false;
+                    
+                    alert(`Excel 載入成功！共讀取 ${excelData.length} 筆資料。`);
+                } else {
+                    alert('Excel 內似乎沒有資料。');
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        function mmToPx(mm, dpi) {
+            return (mm / 25.4) * dpi;
+        }
+
+        // 第四步：核心執行與 ZIP 打包邏輯
+        processBtn.addEventListener('click', async () => {
+            if (!pdfDocument) {
+                alert('請先匯入 PDF 檔案！');
+                return;
+            }
+
+            const isExcelNaming = document.getElementById('nameExcel').checked;
+            if (isExcelNaming && excelData.length === 0) {
+                alert('請先匯入並設定 Excel 資料！');
+                return;
+            }
+
+            const cropWidthMm = parseFloat(cropWidthInput.value);
+            const cropHeightMm = parseFloat(cropHeightInput.value);
+            const dpi = parseInt(document.getElementById('dpiSetting').value);
+            const imgFormat = document.getElementById('imgFormat').value;
+            const ext = imgFormat === 'image/jpeg' ? 'jpg' : 'png';
+            
+            const prefix = document.getElementById('prefix').value.trim();
+            const col1 = col1Select.value;
+            const col2 = col2Select.value;
+            const col3 = col3Select.value;
+            const suffix = document.getElementById('suffix').value.trim();
+
+            const canvasWidthPx = Math.round(mmToPx(cropWidthMm, dpi));
+            const canvasHeightPx = Math.round(mmToPx(cropHeightMm, dpi));
+
+            processBtn.disabled = true;
+            document.getElementById('progressContainer').classList.remove('hidden');
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+
+            let zip = new JSZip();
+            let safeFolderName = sanitizeFilename(pdfFileName);
+            let zipFolder = zip.folder(safeFolderName);
+
+            // 取得當下使用者的電腦本地時間，並修正 ZIP 套件的時區偏差
+            const now = new Date();
+            const localTimeForZip = new Date(now.getTime() - (now.getTimezoneOffset() * 60000));
+
+            const totalPages = pdfDocument.numPages;
+
+            for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+                const percent = Math.round((pageNum / totalPages) * 100);
+                progressBar.style.width = `${percent}%`;
+                progressText.textContent = `正在處理第 ${pageNum} / ${totalPages} 頁...`;
+
+                const page = await pdfDocument.getPage(pageNum);
+                const scale = dpi / 72;
+                const viewport = page.getViewport({ scale: scale });
+
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = canvasWidthPx;
+                canvas.height = canvasHeightPx;
+
+                const renderContext = {
+                    canvasContext: ctx,
+                    viewport: viewport,
+                    background: 'white'
+                };
+
+                await page.render(renderContext).promise;
+                const imgDataUrl = canvas.toDataURL(imgFormat, 1.0);
+
+                let finalImageName = "";
+                if (isExcelNaming) {
+                    const excelRowIndex = pageNum - 1; 
+                    let nameParts = []; 
+                    
+                    if (prefix) nameParts.push(prefix);
+                    
+                    if (excelData[excelRowIndex]) {
+                        if (col1 && excelData[excelRowIndex][col1] !== undefined) nameParts.push(excelData[excelRowIndex][col1]);
+                        if (col2 && excelData[excelRowIndex][col2] !== undefined) nameParts.push(excelData[excelRowIndex][col2]);
+                        if (col3 && excelData[excelRowIndex][col3] !== undefined) nameParts.push(excelData[excelRowIndex][col3]);
+                    }
+
+                    if (suffix) nameParts.push(suffix);
+
+                    let combinedName = nameParts.length > 0 ? nameParts.join('_') : `無資料_${pageNum}`;
+                    combinedName = sanitizeFilename(combinedName);
+                    
+                    finalImageName = `${combinedName}.${ext}`;
+                } else {
+                    finalImageName = sanitizeFilename(`${pdfFileName}_${pageNum}`) + `.${ext}`;
+                }
+
+                const base64Data = imgDataUrl.split(',')[1];
+                
+                // 將圖片寫入 ZIP，並強制指定建立時間為修正後的本地時間
+                zipFolder.file(finalImageName, base64Data, {
+                    base64: true,
+                    date: localTimeForZip
+                });
+            }
+
+            progressText.textContent = `圖片處理完成，正在打包壓縮檔...`;
+            
+            try {
+                const blob = await zip.generateAsync({type:"blob"});
+                
+                if (window.showSaveFilePicker) {
+                    progressText.textContent = `請在跳出的視窗中選擇儲存位置...`;
+                    const fileHandle = await window.showSaveFilePicker({
+                        suggestedName: safeFolderName + ".zip",
+                        types: [{
+                            description: 'ZIP 壓縮檔',
+                            accept: {'application/zip': ['.zip']},
+                        }],
+                    });
+                    const writable = await fileHandle.createWritable();
+                    await writable.write(blob);
+                    await writable.close();
+                    progressText.textContent = `打包完畢！已成功存入您指定的位置。`;
+                } else {
+                    saveAs(blob, safeFolderName + ".zip");
+                    progressText.textContent = `打包完畢！已觸發下載。`;
+                }
+            } catch (err) {
+                console.log('儲存取消或失敗', err);
+                if (err.name !== 'AbortError') {
+                    progressText.textContent = `儲存發生錯誤，請重試。`;
+                } else {
+                    progressText.textContent = `已取消儲存。`;
+                }
+            } finally {
+                processBtn.disabled = false;
+                setTimeout(() => {
+                    document.getElementById('progressContainer').classList.add('hidden');
+                    progressBar.style.width = '0%';
+                }, 4000);
+            }
+        });
+    </script>
+</body>
+</html>
